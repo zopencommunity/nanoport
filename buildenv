@@ -19,3 +19,8 @@ zopen_append_to_env()
 {
   # echo envars outside of PATH, MANPATH, LIBPATH
 }
+
+zopen_get_version()
+{
+    ./src/nano -V | head -1 | awk '{print $4}'
+}
