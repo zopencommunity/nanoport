@@ -1,6 +1,9 @@
-export ZOPEN_TARBALL_URL="https://nano-editor.org/dist/v7/nano-7.0.tar.gz"
-export ZOPEN_TARBALL_DEPS="autoconf automake make gettext ncurses zoslib"
-export ZOPEN_TYPE="TARBALL"
+# bump: nano-version /NANO_VERSION="(.*)"/ https://nano-editor.org/dist/latest/|re:/nano-([\d.]+).tar.gz/$1/|semver:*
+NANO_VERSION="7.0"
+
+export ZOPEN_BUILD_LINE="STABLE"
+export ZOPEN_STABLE_URL="https://nano-editor.org/dist/latest/nano-${NANO_VERSION}tar.gz"
+export ZOPEN_STABLE_DEPS="autoconf automake make gettext ncurses zoslib"
 export ZOPEN_CHECK="skip"
 
 zopen_check_results()
