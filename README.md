@@ -1,4 +1,6 @@
-nano
+[![Automatic version updates](https://github.com/ZOSOpenTools/nanoport/actions/workflows/bump.yml/badge.svg)](https://github.com/ZOSOpenTools/nanoport/actions/workflows/bump.yml)
+
+# nano
 
 GNU nano is a text editor for Unix-like operating systems
 
