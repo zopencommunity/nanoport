@@ -50,3 +50,19 @@ index 776e0d0..a921078 100644
  		statusline(REMARK, _("Nothing changed"));
  		return;
  	}
+diff --git a/src/nano.c b/src/nano.c
+index 091d3ca..53c9fbb 100644
+--- a/src/nano.c
++++ b/src/nano.c
+@@ -857,7 +857,11 @@ bool scoop_stdin(void)
+ 							"type ^D or ^D^D to finish.\n"));
+ 
+ 	/* Open standard input. */
++        #if defined(__MVS__)
++	stream = fopen("/dev/fd0", "rb");
++        #else
+ 	stream = fopen("/dev/stdin", "rb");
++        #endif
+ 	if (stream == NULL) {
+ 		int errnumber = errno;
+ 
