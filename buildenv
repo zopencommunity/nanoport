@@ -22,18 +22,27 @@ zopen_check_results()
   echo "expectedFailures:0"
 }
 
-zopen_append_to_env()
-{
-  # echo envars outside of PATH, MANPATH, LIBPATH
-}
-
 zopen_get_version()
 {
     ./src/nano -V | head -1 | awk '{print $4}'
 }
 
+zopen_post_install() 
+{
+  # Create a dir for the dot file inclusion
+  mkdir -p $ZOPEN_INSTALL_DIR/nano
+}
+
+zopen_append_to_setup()
+{
+cat <<ZZ
+  /bin/find \$PWD/share/nano  -name "*.nanorc" -exec echo include {} \; > \$PWD/nano/nanorc
+ZZ
+}
+
 zopen_append_to_zoslib_env() {
  cat <<EOF
 ASCII_TERMINFO|set|PROJECT_ROOT/../../ncurses/ncurses/share/terminfo/
+XDG_CONFIG_HOME|set|PROJECT_ROOT
 EOF
 }

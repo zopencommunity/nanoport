@@ -389,3 +389,58 @@ index e6e01f3..fa03288 100644
  		statusline(REMARK, _("Nothing changed"));
  		return;
  	}
+diff --git a/syntax/Makefile.in b/syntax/Makefile.in
+index 3705047..7f7a1ff 100644
+--- a/syntax/Makefile.in
++++ b/syntax/Makefile.in
+@@ -1927,6 +1927,7 @@ pkgdata_DATA = asm.nanorc \
+ 		changelog.nanorc \
+ 		cmake.nanorc \
+ 		c.nanorc \
++		cobol.nanorc \
+ 		css.nanorc \
+ 		default.nanorc \
+ 		elisp.nanorc \
+diff --git a/syntax/cobol.nanorc b/syntax/cobol.nanorc
+new file mode 100644
+index 0000000..da13102
+--- /dev/null
++++ b/syntax/cobol.nanorc
+@@ -0,0 +1,37 @@
++## Syntax highlighting for COBOL files.
++
++syntax cobol "\.cob|\.cbl|\.cpy$"
++header "^       IDENTIFICATION DIVISION\."
++magic "^       PROGRAM-ID\."
++
++# Comments.
++color brightblue "^[[:blank:]]*\*.*$"
++
++# Divisions.
++color green "^       (IDENTIFICATION|ENVIRONMENT|DATA|PROCEDURE) DIVISION\."
++color green "^       CONFIGURATION SECTION\."
++
++# Sections.
++color green "^       (WORKING-STORAGE|LINKAGE|COMMUNICATION|REPORT|SCREEN) SECTION\."
++
++# Paragraphs and sentences.
++color brightmagenta "^[[:blank:]]*[A-Z][A-Z0-9-]*\."
++
++# Data types.
++color cyan "\<(PIC|PICTURE)\>"
++color cyan "\<(LEVEL|OCCURS)\>"
++
++# COBOL verbs.
++color brightyellow "\<(ACCEPT|ADD|ALTER|CALL|CANCEL|CLOSE|COMPUTE|CONTINUE|DELETE|DISPLAY|DIVIDE|ELSE|END|EVALUATE|EXEC|EXIT|GENERATE|GO|IF|INITIALIZE|INSPECT|MERGE|MOVE|MULTIPLY|OPEN|PERFORM|READ|RECEIVE|RELEASE|RETURN|REWRITE|SEARCH|SEND|SET|SORT|START|STOP|STRING|SUBTRACT|UNSTRING|WRITE)\>"
++
++# Special registers.
++color magenta "\<(ADDRESS|EOP|EOJ|EOF|EOL|EOC|EQ|GE|GT|LE|LT|NE|NOT|NULL|NULLS|OPTION|SPACE|SPACES|ZERO|ZEROS)\>"
++
++# Quoted strings.
++color brightred "'[^']*'|\"[^\"]*\""
++
++# Reminders.
++color brightwhite,yellow "\<(FIXME|TODO|XXX)\>"
++
++# Trailing whitespace.
++color red "[[:blank:]]+$"
