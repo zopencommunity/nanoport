@@ -3,7 +3,7 @@ NANO_VERSION="8.1"
 
 export ZOPEN_BUILD_LINE="STABLE"
 export ZOPEN_STABLE_URL="https://nano-editor.org/dist/latest/nano-${NANO_VERSION}.tar.gz"
-export ZOPEN_STABLE_DEPS="autoconf automake make gettext ncurses zoslib"
+export ZOPEN_STABLE_DEPS="autoconf automake make gettext ncurses zoslib cjson libdio"
 export ZOPEN_CHECK="skip"
 export ZOPEN_COMP=CLANG
 export ZOPEN_EXTRA_CPPFLAGS="-I\$NCURSES_HOME/include/ncurses"
