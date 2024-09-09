@@ -10,6 +10,8 @@ export ZOPEN_EXTRA_CPPFLAGS="-I\$NCURSES_HOME/include/ncurses"
 export NCURSES_CFLAGS="-I\$NCURSES_HOME/include"
 export NCURSES_LIBS="-L\$NCURSES_HOME/lib"
 
+export ZOPEN_RUNTIME_DEPS="libdio"
+
 zopen_check_results()
 {
   dir="$1"

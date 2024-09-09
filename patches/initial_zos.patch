@@ -29,41 +29,21 @@ index 27777de..1a608c3 100644
  	syntaxtype *syntax;
  		/* The syntax that applies to this file, if any. */
 diff --git a/src/files.c b/src/files.c
-index fc30ad6..dd3fa0e 100644
+index fc30ad6..bf8ad59 100644
 --- a/src/files.c
 +++ b/src/files.c
-@@ -30,6 +30,30 @@
+@@ -30,6 +30,10 @@
  #include <string.h>
  #include <unistd.h>
  #include <sys/wait.h>
 +#ifdef __MVS__
 +#include <dio.h>
-+char *safe_tempfileext(char* extension, int* fd);
-+#ifdef __MVS__
-+int count_lines(FILE *fp) {
-+  int lines = 0;
-+  int ch;
-+
-+  rewind(fp);
-+
-+  while ((ch = fgetc(fp)) != EOF) {
-+    if (ch == '\n') {
-+      lines++;
-+    }
-+  }
-+
-+  if (ch != '\n' && lines > 0) {
-+    lines++;
-+  }
-+
-+  return lines;
-+}
-+#endif
++char *safe_tempfileext(char* extension);
 +#endif
  
  #define RW_FOR_ALL  (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
  
-@@ -398,6 +422,12 @@ bool open_buffer(const char *filename, bool new_one)
+@@ -398,6 +402,12 @@ bool open_buffer(const char *filename, bool new_one)
  	/* Display newlines in filenames as ^J. */
  	as_an_at = FALSE;
  
@@ -76,7 +56,7 @@ index fc30ad6..dd3fa0e 100644
  #ifdef ENABLE_OPERATINGDIR
  	if (outside_of_confinement(filename, FALSE)) {
  		statusline(ALERT, _("Can't read file from outside of %s"), operating_dir);
-@@ -405,7 +435,104 @@ bool open_buffer(const char *filename, bool new_one)
+@@ -405,7 +415,53 @@ bool open_buffer(const char *filename, bool new_one)
  	}
  #endif
  
@@ -111,69 +91,18 @@ index fc30ad6..dd3fa0e 100644
 +        // Create a temporary file to represent the dataset 
 +        char file_suffix[PATH_MAX];
 +        map_to_unixfile(dsfile, file_suffix);
++        realname = safe_tempfileext(file_suffix);
 +
-+        int temp_fd = -1;
-+        realname = safe_tempfileext(file_suffix, &temp_fd);
-+
-+        // Default perms are writeable, unless ds is readonly
-+        int perms = 0666;
-+        if (dsfile->readonly)
-+          perms = 0444; 
-+        
-+        __disableautocvt(temp_fd);
-+
-+        //TODO: Create as function
-+        int length_prefix = has_length_prefix(dsfile->recfm);
-+        int i = 0;
-+        char* data = dsfile->buffer;
-+        if (length_prefix) {
-+          uint16_t reclen;
-+          while (i < dsfile->bufflen) {
-+            memcpy(&reclen, &data[i], sizeof(reclen));
-+            i += sizeof(reclen);
-+            if (write(temp_fd, &data[i], reclen) != reclen) {
-+              close_dataset(dsfile);
-+              close(temp_fd);
-+              return FALSE;
-+            }
-+            //if (!curbuf->b_p_bin) 
-+              if (write(temp_fd, "\x15", 1) != 1) {
-+                close_dataset(dsfile);
-+                close(temp_fd);
-+                return FALSE;
-+              }
-+            i += reclen;
-+          }
-+        } else {
-+          while (i < dsfile->bufflen) {
-+            if (write(temp_fd, &data[i], dsfile->reclen) != dsfile->reclen) {
-+              close_dataset(dsfile);
-+              close(temp_fd);
-+              return FALSE;
-+            }
-+            //if (!curbuf->b_p_bin)
-+              if (write(temp_fd, "\x15", 1) != 1) {
-+                free(dsfile->buffer);
-+                close_dataset(dsfile);
-+                close(temp_fd);
-+               return FALSE;
-+              }
-+            i = i + dsfile->reclen;
-+          }
-+        }
-+
-+        //free(dsfile->buffer);
-+
-+        // Set to untagged - Rely on the zoslib heuristic for text detection
-+        __chgfdccsid(temp_fd, 0);
-+
-+        if (close_dataset(dsfile) > 0) {
++        if (write_dataset_to_temp_file(dsfile, realname, dsfile->txtflag == 0 || dsfile->is_binary) != 0) {
 +	        statusline(ALERT, _(dsfile->msgbuff));
-+          close(temp_fd);
++          close_dataset(dsfile);
 +          return FALSE;
 +        }
-+
-+        close(temp_fd);
++        
++        if (close_dataset(dsfile) > 0) {
++	        statusline(ALERT, _(dsfile->msgbuff));
++          return FALSE;
++        }
 +      } 
 +    } 
 +  if (!isdataset)
@@ -182,10 +111,11 @@ index fc30ad6..dd3fa0e 100644
  
  	/* Don't try to open directories, character files, or block files. */
  	if (*filename != '\0' && stat(realname, &fileinfo) == 0) {
-@@ -480,6 +607,14 @@ bool open_buffer(const char *filename, bool new_one)
+@@ -480,6 +536,16 @@ bool open_buffer(const char *filename, bool new_one)
  		openfile->current = openfile->filetop;
  		openfile->current_x = 0;
  		openfile->placewewant = 0;
++#ifdef __MVS__
 +    if (isdataset) {
 +      openfile->is_dataset = 1;
 +      openfile->reclen = reclen;
@@ -194,14 +124,26 @@ index fc30ad6..dd3fa0e 100644
 +    else {
 +      openfile->is_dataset = 0;
 +    }
++#endif
  	}
  
  #ifdef ENABLE_COLOR
-@@ -1443,6 +1578,32 @@ char *check_writable_directory(const char *path)
+@@ -907,6 +973,9 @@ int open_file(const char *filename, bool new_one, FILE **f)
+ 
+ 	/* Try opening the file. */
+ 	fd = open(full_filename, O_RDONLY);
++#ifdef __MVS__
++  openfile->needs_conversion =  __file_needs_conversion(fd);
++#endif
+ 
+ #ifndef NANO_TINY
+ 	restore_handler_for_Ctrl_C();
+@@ -1443,6 +1512,36 @@ char *check_writable_directory(const char *path)
  	return full_path;
  }
  
-+char *safe_tempfileext(char* extension, int* fd)
++#ifdef __MVS__
++char *safe_tempfileext(char* extension)
 +{
 +	const char *env_dir = getenv("TMPDIR");
 +	char *tempdir = NULL, *tempfile_name = NULL;
@@ -222,20 +164,82 @@ index fc30ad6..dd3fa0e 100644
 +	strcat(tempfile_name, "nano.XXXXXX");
 +	strcat(tempfile_name, extension);
 +
-+	*fd = mkstemps(tempfile_name, strlen(extension));
++	int fd = mkstemps(tempfile_name, strlen(extension));
++  close(fd); // it will get recreated
++  unlink(tempfile_name);
 +
 +  return tempfile_name;
 +}
++#endif
 +
  /* Create, safely, a temporary file in the standard temp directory.
   * On success, return the malloc()ed filename, plus the corresponding
   * file stream opened in read-write mode.  On error, return NULL. */
-@@ -1983,6 +2144,107 @@ bool write_file(const char *name, FILE *thefile, bool normal,
+@@ -1755,6 +1854,7 @@ bool make_backup_of(char *realname)
+ bool write_file(const char *name, FILE *thefile, bool normal,
+ 		kind_of_writing_type method, bool annotate)
+ {
++
+ #ifndef NANO_TINY
+ 	bool is_existing_file;
+ 		/* Becomes TRUE when the file is non-temporary and exists. */
+@@ -1801,6 +1901,20 @@ bool write_file(const char *name, FILE *thefile, bool normal,
+ 			goto cleanup_and_exit;
  	}
- #endif
+ 
++  
++#ifdef __MVS__
++  if (!is_existing_file)
++    __tag_new_file(fileno(thefile));
++  else if (openfile->statinfo->st_tag.ft_ccsid == FT_UNTAGGED) {
++    if (openfile->needs_conversion) {
++      __chgfdccsid(fileno(thefile), 1047);
++    } else
++      __setfdccsid(fileno(thefile), 0);
++  }
++  else
++    __chgfdccsid(fileno(thefile), openfile->statinfo->st_tag.ft_ccsid);
++#endif
++
+ 	/* When prepending, first copy the existing file to a temporary file. */
+ 	if (method == PREPEND) {
+ 		FILE *source = NULL;
+@@ -1859,6 +1973,23 @@ bool write_file(const char *name, FILE *thefile, bool normal,
+ 		descriptor = open(realname, O_WRONLY | O_CREAT | ((method == APPEND) ?
+ 					O_APPEND : (normal ? O_TRUNC : O_EXCL)), permissions);
  
 +#ifdef __MVS__
++  if (!is_existing_file)
++    __tag_new_file(descriptor);
++  else if (openfile->statinfo->st_tag.ft_ccsid == FT_UNTAGGED) {
++    struct f_cnvrt cvtreq = {SETCVTON, 0, 1047};
++    if (openfile->needs_conversion) {
++      fcntl(descriptor, F_CONTROL_CVT, &cvtreq);
++    __setfdccsid(descriptor, 0);
++    } else
++      __setfdccsid(descriptor, 0);
++  }
++  else
++    __chgfdccsid(descriptor, openfile->statinfo->st_tag.ft_ccsid);
++#endif
++
++	/* When prepending, first copy the existing file to a temporary file. */
++
+ #ifndef NANO_TINY
+ 		if (normal)
+ 			restore_handler_for_Ctrl_C();
+@@ -1985,7 +2116,52 @@ bool write_file(const char *name, FILE *thefile, bool normal,
+ 
+ 	if (fclose(thefile) != 0) {
+ 		statusline(ALERT, _("Error writing %s: %s"), realname, strerror(errno));
++	  goto cleanup_and_exit;
++  }
++
++#ifdef __MVS__
++  fprintf(stderr, "TESTING...: %d", openfile->is_dataset);
 +  if (openfile->is_dataset) {
++
++  fprintf(stderr, "TESTING2...");
 +    // copy from temporary file back to dataset
 +    struct DFILE *dsfile = open_dataset(openfile->dsname, NULL);
 +    if (!dsfile) {
@@ -249,95 +253,34 @@ index fc30ad6..dd3fa0e 100644
 +			goto cleanup_and_exit;
 +    }
 +
-+    int length_prefix = has_length_prefix(dsfile->recfm);
-+
-+    // Read temporary file into record buffer
-+    FILE *fp;
-+    if ((fp = fopen(realname, "r")) == NULL) {
-+			statusline(ALERT, _("Cannot open temporary file %s"), realname);
++    if (read_temp_file_to_buffer(realname, dsfile) == NULL) {
++			statusline(ALERT, _("Error %s"), dsfile->msgbuff);
 +      close_dataset(dsfile);
-+			goto cleanup_and_exit;
-+    }
-+
-+#define DS_MAX_REC_SIZE (32768)
-+
-+    long bufferSize = count_lines(fp) * dsfile->reclen * 2;
-+    rewind(fp);
-+
-+    char *line = malloc(DS_MAX_REC_SIZE);
-+    char *dsbuffer = malloc(bufferSize);
-+    int tot_size = 0;
-+    uint16_t reclen = 0;
-+
-+    int linenum = 0;
-+    while (fgets(line, DS_MAX_REC_SIZE, fp)) {
-+      linenum++;
-+      reclen = strlen(line) - 1; // ignore newline;
-+      if (reclen > dsfile->reclen) {
-+			  statusline(ALERT, _("Line %d exceeded record length of %d"), linenum, dsfile->reclen);
-+        close_dataset(dsfile);
-+        free(line);
-+        free(dsbuffer);
-+			  goto cleanup_and_exit;
-+      }
-+
-+      __a2e_s(line);
-+      if (length_prefix) {
-+        if ((tot_size + sizeof(uint16_t) + reclen) > bufferSize) {
-+          fclose(fp);
-+          //vim_snprintf((char *)errmsg, 300,
-+           //           "Exceeded buffer length (%d) on line %d", buf->reclen,
-+            //          linenum);
-+          free(line);
-+          free(dsbuffer);
-+          close_dataset(dsfile);
-+			    goto cleanup_and_exit;
-+        }
-+        memcpy(&dsbuffer[tot_size], &reclen, sizeof(uint16_t));
-+        tot_size += sizeof(uint16_t);
-+        memcpy(&dsbuffer[tot_size], line, reclen);
-+        tot_size += reclen;
-+      } else {
-+        if ((tot_size + dsfile->reclen) > bufferSize) {
-+          fclose(fp);
-+          //vim_snprintf((char *)errmsg, 300,
-+           //           "Exceeded buffer length (%d) on line %d", buf->reclen,
-+           //           linenum);
-+          free(line);
-+          free(dsbuffer);
-+          close_dataset(dsfile);
-+			    goto cleanup_and_exit;
-+        }
-+        memcpy(&dsbuffer[tot_size], line, reclen);
-+        memset(&dsbuffer[tot_size + reclen], 0x40, dsfile->reclen - reclen);
-+        tot_size += dsfile->reclen;
-+      }
-+    }
-+    fclose(fp);
-+
-+    dsfile->buffer = dsbuffer;
-+    dsfile->bufflen = tot_size;
++      goto cleanup_and_exit;
++    } 
 +
 +    if (write_dataset(dsfile)) {
 +			statusline(ALERT, _("Error %s"), dsfile->msgbuff);
 +      close_dataset(dsfile);
-+      free(line);
-+      free(dsbuffer);
 +			goto cleanup_and_exit;
 +    }
-+    free(line);
-+    free(dsbuffer);
 +    if (close_dataset(dsfile)) {
 +			statusline(ALERT, _("Error %s"), dsfile->msgbuff);
 +			goto cleanup_and_exit;
 +    }
 +  }
++
++  if (openfile->needs_conversion) {
++    __setfdccsid(fileno(thefile), 0);
++  }
++
 +#endif
 +
-+
- 	if (fclose(thefile) != 0) {
- 		statusline(ALERT, _("Error writing %s: %s"), realname, strerror(errno));
  
++if (0) {
+   cleanup_and_exit:
+ #ifndef NANO_TINY
+ 		if (errno == ENOSPC && normal) {
 diff --git a/src/nano.c b/src/nano.c
 index 0ae71d8..6cda18c 100644
 --- a/src/nano.c
