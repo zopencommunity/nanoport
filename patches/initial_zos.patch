@@ -29,7 +29,7 @@ index 27777de..1a608c3 100644
  	syntaxtype *syntax;
  		/* The syntax that applies to this file, if any. */
 diff --git a/src/files.c b/src/files.c
-index fc30ad6..bf8ad59 100644
+index fc30ad6..edd9b0c 100644
 --- a/src/files.c
 +++ b/src/files.c
 @@ -30,6 +30,10 @@
@@ -228,7 +228,7 @@ index fc30ad6..bf8ad59 100644
  #ifndef NANO_TINY
  		if (normal)
  			restore_handler_for_Ctrl_C();
-@@ -1985,7 +2116,52 @@ bool write_file(const char *name, FILE *thefile, bool normal,
+@@ -1985,7 +2116,49 @@ bool write_file(const char *name, FILE *thefile, bool normal,
  
  	if (fclose(thefile) != 0) {
  		statusline(ALERT, _("Error writing %s: %s"), realname, strerror(errno));
@@ -236,10 +236,7 @@ index fc30ad6..bf8ad59 100644
 +  }
 +
 +#ifdef __MVS__
-+  fprintf(stderr, "TESTING...: %d", openfile->is_dataset);
 +  if (openfile->is_dataset) {
-+
-+  fprintf(stderr, "TESTING2...");
 +    // copy from temporary file back to dataset
 +    struct DFILE *dsfile = open_dataset(openfile->dsname, NULL);
 +    if (!dsfile) {
