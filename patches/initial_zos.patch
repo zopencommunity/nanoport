@@ -1,20 +1,5 @@
 diff --git a/src/definitions.h b/src/definitions.h
 index 27777de..1a608c3 100644
---- a/src/definitions.h
-+++ b/src/definitions.h
-@@ -66,8 +66,12 @@
- #elif defined(HAVE_NCURSES_H)
- #include <ncurses.h>
- #else
-+#if defined(__MVS__)
-+#include <ncurses/ncurses.h>
-+#else
- #include <curses.h>
- #endif
-+#endif
- 
- /* Native language support. */
- #ifdef ENABLE_NLS
 @@ -589,6 +593,12 @@ typedef struct openfilestruct {
  #endif
  	bool modified;
