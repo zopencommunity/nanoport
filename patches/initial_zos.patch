@@ -1,8 +1,8 @@
 diff --git a/src/definitions.h b/src/definitions.h
-index 8c54ca8..c61481b 100644
+index 265bad6..0c643c3 100644
 --- a/src/definitions.h
 +++ b/src/definitions.h
-@@ -592,6 +592,12 @@ typedef struct openfilestruct {
+@@ -598,6 +598,12 @@ typedef struct openfilestruct {
  #endif
  	bool modified;
  		/* Whether the file has been modified. */
@@ -16,7 +16,7 @@ index 8c54ca8..c61481b 100644
  	syntaxtype *syntax;
  		/* The syntax that applies to this file, if any. */
 diff --git a/src/files.c b/src/files.c
-index d8b5f42..7d873fe 100644
+index a8a37cc..988a107 100644
 --- a/src/files.c
 +++ b/src/files.c
 @@ -30,6 +30,11 @@
@@ -31,7 +31,7 @@ index d8b5f42..7d873fe 100644
  
  #define RW_FOR_ALL  (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
  
-@@ -398,6 +403,12 @@ bool open_buffer(const char *filename, bool new_one)
+@@ -399,6 +404,12 @@ bool open_buffer(const char *filename, bool new_one)
  	/* Display newlines in filenames as ^J. */
  	as_an_at = FALSE;
  
@@ -44,7 +44,7 @@ index d8b5f42..7d873fe 100644
  #ifdef ENABLE_OPERATINGDIR
  	if (outside_of_confinement(filename, FALSE)) {
  		statusline(ALERT, _("Can't read file from outside of %s"), operating_dir);
-@@ -405,7 +416,53 @@ bool open_buffer(const char *filename, bool new_one)
+@@ -406,7 +417,53 @@ bool open_buffer(const char *filename, bool new_one)
  	}
  #endif
  
@@ -74,9 +74,9 @@ index d8b5f42..7d873fe 100644
 +        // Store the original dataset name
 +        dsname = strdup(filename);
 +        reclen = dsfile->reclen;
-+        isdataset = TRUE; 
++        isdataset = TRUE;
 +
-+        // Create a temporary file to represent the dataset 
++        // Create a temporary file to represent the dataset
 +        char file_suffix[PATH_MAX];
 +        map_to_unixfile(dsfile, file_suffix);
 +        realname = safe_tempfileext(file_suffix);
@@ -86,20 +86,20 @@ index d8b5f42..7d873fe 100644
 +          close_dataset(dsfile);
 +          return FALSE;
 +        }
-+        
++
 +        if (close_dataset(dsfile) > 0) {
 +	        statusline(ALERT, _(dsfile->msgbuff));
 +          return FALSE;
 +        }
-+      } 
-+    } 
++      }
++    }
 +  if (!isdataset)
 +#endif
 +	  realname = real_dir_from_tilde(filename);
  
  	/* Don't try to open directories, character files, or block files. */
  	if (*filename != '\0' && stat(realname, &fileinfo) == 0) {
-@@ -480,6 +537,16 @@ bool open_buffer(const char *filename, bool new_one)
+@@ -481,6 +538,16 @@ bool open_buffer(const char *filename, bool new_one)
  		openfile->current = openfile->filetop;
  		openfile->current_x = 0;
  		openfile->placewewant = 0;
@@ -116,7 +116,7 @@ index d8b5f42..7d873fe 100644
  	}
  
  #ifdef ENABLE_COLOR
-@@ -907,6 +974,9 @@ int open_file(const char *filename, bool new_one, FILE **f)
+@@ -908,6 +975,9 @@ int open_file(const char *filename, bool new_one, FILE **f)
  
  	/* Try opening the file. */
  	fd = open(full_filename, O_RDONLY);
@@ -126,7 +126,7 @@ index d8b5f42..7d873fe 100644
  
  #ifndef NANO_TINY
  	restore_handler_for_Ctrl_C();
-@@ -1454,6 +1524,36 @@ char *check_writable_directory(const char *path)
+@@ -1455,6 +1525,36 @@ char *check_writable_directory(const char *path)
  	return full_path;
  }
  
@@ -163,7 +163,7 @@ index d8b5f42..7d873fe 100644
  /* Create, safely, a temporary file in the standard temp directory.
   * On success, return the malloc()ed filename, plus the corresponding
   * file stream opened in read-write mode.  On error, return NULL. */
-@@ -1766,6 +1866,7 @@ bool make_backup_of(char *realname)
+@@ -1767,6 +1867,7 @@ bool make_backup_of(char *realname)
  bool write_file(const char *name, FILE *thefile, bool normal,
  		kind_of_writing_type method, bool annotate)
  {
@@ -171,11 +171,11 @@ index d8b5f42..7d873fe 100644
  #ifndef NANO_TINY
  	bool is_existing_file;
  		/* Becomes TRUE when the file is non-temporary and exists. */
-@@ -1812,6 +1913,20 @@ bool write_file(const char *name, FILE *thefile, bool normal,
+@@ -1813,6 +1914,20 @@ bool write_file(const char *name, FILE *thefile, bool normal,
  			goto cleanup_and_exit;
  	}
  
-+  
++
 +#ifdef __MVS__
 +  if (!is_existing_file)
 +    __tag_new_file(fileno(thefile));
@@ -192,7 +192,7 @@ index d8b5f42..7d873fe 100644
  	/* When prepending, first copy the existing file to a temporary file. */
  	if (method == PREPEND) {
  		FILE *source = NULL;
-@@ -1870,6 +1985,23 @@ bool write_file(const char *name, FILE *thefile, bool normal,
+@@ -1871,6 +1986,23 @@ bool write_file(const char *name, FILE *thefile, bool normal,
  		descriptor = open(realname, O_WRONLY | O_CREAT | ((method == APPEND) ?
  					O_APPEND : (normal ? O_TRUNC : O_EXCL)), permissions);
  
@@ -216,7 +216,7 @@ index d8b5f42..7d873fe 100644
  #ifndef NANO_TINY
  		if (normal)
  			restore_handler_for_Ctrl_C();
-@@ -1996,7 +2128,49 @@ bool write_file(const char *name, FILE *thefile, bool normal,
+@@ -1997,7 +2129,49 @@ bool write_file(const char *name, FILE *thefile, bool normal,
  
  	if (fclose(thefile) != 0) {
  		statusline(ALERT, _("Error writing %s: %s"), realname, strerror(errno));
@@ -242,7 +242,7 @@ index d8b5f42..7d873fe 100644
 +			statusline(ALERT, _("Error %s"), dsfile->msgbuff);
 +      close_dataset(dsfile);
 +      goto cleanup_and_exit;
-+    } 
++    }
 +
 +    if (write_dataset(dsfile)) {
 +			statusline(ALERT, _("Error %s"), dsfile->msgbuff);
@@ -267,10 +267,10 @@ index d8b5f42..7d873fe 100644
  #ifndef NANO_TINY
  		if (errno == ENOSPC && normal) {
 diff --git a/src/nano.c b/src/nano.c
-index b2abff7..45de7f7 100644
+index 55feb92..3bcd562 100644
 --- a/src/nano.c
 +++ b/src/nano.c
-@@ -873,7 +873,11 @@ bool scoop_stdin(void)
+@@ -874,7 +874,11 @@ bool scoop_stdin(void)
  							"type ^D or ^D^D to finish.\n"));
  
  	/* Open standard input. */
@@ -283,7 +283,7 @@ index b2abff7..45de7f7 100644
  		int errnumber = errno;
  
 diff --git a/src/text.c b/src/text.c
-index b8899da..23c8e17 100644
+index b8899da..5f68155 100644
 --- a/src/text.c
 +++ b/src/text.c
 @@ -2133,10 +2133,13 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
@@ -307,28 +307,28 @@ index b8899da..23c8e17 100644
  	/* When the temporary file wasn't touched, say so and leave. */
  	if (timestamp_sec > 0 && stat(tempfile_name, &fileinfo) == 0 &&
 +#if defined(__MVS__)
-+                                        (long)fileinfo.st_mtime == timestamp_sec) 
++                                        (long)fileinfo.st_mtime == timestamp_sec)
 +#else
  					(long)fileinfo.st_mtim.tv_sec == timestamp_sec &&
 -					(long)fileinfo.st_mtim.tv_nsec == timestamp_nsec) {
-+					(long)fileinfo.st_mtim.tv_nsec == timestamp_nsec) 
++					(long)fileinfo.st_mtim.tv_nsec == timestamp_nsec)
 +#endif
 +        {
  		statusline(REMARK, _("Nothing changed"));
  		return;
  	}
 diff --git a/syntax/Makefile.in b/syntax/Makefile.in
-index bdc8f0a..9f1b885 100644
+index 7b93af8..59a262b 100644
 --- a/syntax/Makefile.in
 +++ b/syntax/Makefile.in
-@@ -2201,6 +2201,7 @@ pkgdata_DATA = asm.nanorc \
+@@ -2211,6 +2211,7 @@ pkgdata_DATA = asm.nanorc \
  		changelog.nanorc \
  		cmake.nanorc \
  		c.nanorc \
 +		cobol.nanorc \
  		css.nanorc \
  		default.nanorc \
- 		elisp.nanorc \
+ 		email.nanorc \
 diff --git a/syntax/cobol.nanorc b/syntax/cobol.nanorc
 new file mode 100644
 index 0000000..da13102
