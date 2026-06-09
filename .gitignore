@@ -1,3 +1,6 @@
-nano-7.0/
+nano*/
 log/
+log.STABLE/
+log.DEV/
 install/
+.zoslib_hooks/

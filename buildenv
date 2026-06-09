@@ -1,17 +1,25 @@
 # bump: nano-version /NANO_VERSION="(.*)"/ https://nano-editor.org/dist/latest/|re:/nano-([\d.]+).tar.gz/$1/|semver:*
-NANO_VERSION="8.7.1"
+NANO_VERSION="9.0"
 
 export ZOPEN_BUILD_LINE="STABLE"
 export ZOPEN_CATEGORIES="editor"
-export ZOPEN_STABLE_URL="https://nano-editor.org/dist/latest/nano-${NANO_VERSION}.tar.gz"
-export ZOPEN_STABLE_DEPS="autoconf automake make gettext ncurses zoslib cjson libdio metaldio"
+export ZOPEN_STABLE_URL="https://nano-editor.org/dist/v${NANO_VERSION%%.*}/nano-${NANO_VERSION}.tar.gz"
+export ZOPEN_STABLE_DEPS="make gettext ncurses libdio"
+export ZOPEN_DEV_URL="https://git.savannah.gnu.org/git/nano.git"
+export ZOPEN_DEV_DEPS="autoconf automake make gettext ncurses libdio"
 export ZOPEN_CHECK="skip"
 export ZOPEN_COMP=CLANG
 export ZOPEN_EXTRA_CPPFLAGS="-I\$NCURSES_HOME/include/ncurses"
 export NCURSES_CFLAGS="-I\$NCURSES_HOME/include"
 export NCURSES_LIBS="-L\$NCURSES_HOME/lib"
-
 export ZOPEN_RUNTIME_DEPS="libdio"
+
+zopen_post_buildenv()
+{
+  if [ "${ZOPEN_BUILD_LINE}x" = "DEVx" ]; then
+    export ZOPEN_BOOTSTRAP="./autogen.sh"
+  fi
+}
 
 zopen_check_results()
 {
